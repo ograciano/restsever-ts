@@ -1,6 +1,9 @@
 import express, { Application } from 'express';
 import cors from 'cors';
-import router from '../routes/usuarios';
+import 'dotenv/config';
+import { mongoConn, mysqlConn } from '../database/connection';
+import routerAuth from '../routes/auth';
+import routerUsuarios from '../routes/usuarios';
 
 class Server {
     private app: Application;
@@ -9,21 +12,44 @@ class Server {
 
     constructor(){
         this.app = express();
-        this.port = process.env.PORT || '8000';
+        this.port = '8080';
         this.appRoutes = {
+            auth: '/api/auth',
             usuarios: '/api/usuarios'
         }
+        // middlewares
         this.middlewares()
+        // Rutas
         this.routes()
+        //bases de datos
+        this.mongoConection();
+        this.sqlConnection()
     }
 
     middlewares(){
-        this.app.use(express.json())
-        this.app.use(cors())
+        this.app.use(express.json());
+        this.app.use(cors());
+        this.app.use(express.static('public'));
+    }
+
+    async mongoConection(){
+        await mongoConn();
+    }
+
+    async sqlConnection() {
+        try {
+            await mysqlConn.authenticate();
+            console.log('Base de datos mysql online');
+        } catch (error) {
+            console.log(error);
+            throw new Error();
+
+        }
     }
 
     routes(){
-        this.app.use(this.appRoutes.usuarios, router)
+        this.app.use(this.appRoutes.usuarios, routerUsuarios)
+        this.app.use(this.appRoutes.auth, routerAuth)
     }
 
     listen() {
